@@ -9,6 +9,7 @@ import io.github.lumkit.io.androidPath
 import io.github.lumkit.io.documentFileUri
 import io.github.lumkit.io.documentReallyUri
 import io.github.lumkit.io.primaryChildPath
+import io.github.lumkit.io.stripHiddenChar
 import io.github.lumkit.io.uri
 import java.io.File
 import java.io.FileNotFoundException
@@ -21,12 +22,12 @@ class StorageAccessFrameworkFile : LintFile {
     constructor(file: LintFile, child: String) : super(file, child)
 
     private val context = LintFileConfiguration.instance.context;
-    internal val documentFile: DocumentFile? = DocumentFile.fromTreeUri(context, path.replace("\u200d", "").documentReallyUri(false))
+    internal val documentFile: DocumentFile? = DocumentFile.fromTreeUri(context, path.stripHiddenChar().documentReallyUri(false))
 
     override fun exists(): Boolean =
         this.documentFile?.exists() ?: false
 
-    override fun getParent(): String = this._file.parent?.replace("\u200d", "") ?: ""
+    override fun getParent(): String = this._file.parent?.stripHiddenChar() ?: ""
 
     override fun getParentFile(): LintFile = StorageAccessFrameworkFile(getParent())
 
@@ -65,7 +66,7 @@ class StorageAccessFrameworkFile : LintFile {
         val list = ArrayList<String>()
         if (this.documentFile != null) {
             val listFiles = this.documentFile.listFiles()
-            list.addAll(listFiles.map { it.uri.absolutePath().replace("\u200d", "") })
+            list.addAll(listFiles.map { it.uri.absolutePath().stripHiddenChar() })
         }
         return list.toTypedArray()
     }
@@ -76,7 +77,7 @@ class StorageAccessFrameworkFile : LintFile {
             val listFiles = this.documentFile.listFiles()
             list.addAll(
                 listFiles.filter { filter(it.name ?: "") }
-                    .map { it.uri.absolutePath().replace("\u200d", "") }
+                    .map { it.uri.absolutePath().stripHiddenChar() }
             )
         }
         return list.toTypedArray()
@@ -123,7 +124,7 @@ class StorageAccessFrameworkFile : LintFile {
     }
 
     private fun startPath(): String {
-        val path = path.replace("\u200d", "")
+        val path = path.stripHiddenChar()
         val list = (if (path.startsWith("/")) {
             path.substring(1)
         } else path).split("/")
@@ -136,7 +137,7 @@ class StorageAccessFrameworkFile : LintFile {
     }
 
     private fun endPath(): String {
-        val path = path.replace("\u200d", "")
+        val path = path.stripHiddenChar()
         val list = (if (path.startsWith("/")) {
             path.substring(1)
         } else path).split("/")

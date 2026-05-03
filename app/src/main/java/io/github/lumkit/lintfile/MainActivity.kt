@@ -39,8 +39,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -79,7 +79,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.lumkit.io.*
 import io.github.lumkit.io.data.IoModel
 import io.github.lumkit.io.data.PermissionType
-import io.github.lumkit.io.impl.DefaultFile
 import io.github.lumkit.io.shell.ShizukuUtil
 import io.github.lumkit.lintfile.model.MainViewModel
 import io.github.lumkit.lintfile.ui.theme.LintFileTheme
@@ -102,7 +101,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         LintFileConfiguration.instance.init(this)
-        DefaultFile("").openOutputStream()
 
         setContent {
             LintFileTheme {
@@ -121,6 +119,7 @@ class MainActivity : ComponentActivity() {
             }
     }
 
+    @Suppress("DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         takePersistableUriPermission(12138, requestCode, resultCode, data)
@@ -361,7 +360,7 @@ private fun Content() {
                                 imageVector = if (columnCount > 1) {
                                     Icons.Default.GridView
                                 } else {
-                                    Icons.Default.List
+                                    Icons.AutoMirrored.Filled.List
                                 },
                                 contentDescription = null
                             )
@@ -580,10 +579,6 @@ private fun Content() {
                                 activity.requestAccessPermission(0x000002, openFile.path)
                             }
 
-                            PermissionType.SU -> {
-
-                            }
-
                             PermissionType.SHIZUKU -> try {
                                 ShizukuUtil.requestPermission()
                             } catch (e: Exception) {
@@ -609,7 +604,6 @@ private fun Content() {
                         PermissionType.EXTERNAL_STORAGE -> activity.getString(R.string.text_permission_external_storage)
                         PermissionType.MANAGE_STORAGE -> activity.getString(R.string.text_permission_manage_storage)
                         PermissionType.STORAGE_ACCESS_FRAMEWORK -> activity.getString(R.string.text_permission_storage_access_framework)
-                        PermissionType.SU -> activity.getString(R.string.text_permission_su)
                         PermissionType.SHIZUKU -> activity.getString(R.string.text_permission_shizuku)
                     }
                 )
@@ -639,7 +633,7 @@ private fun FileItem(lintFile: LintFile, onClick: (LintFile) -> Unit) {
                 imageVector = if (lintFile.isDirectory()) {
                     Icons.Default.Folder
                 } else {
-                    Icons.Default.InsertDriveFile
+                    Icons.AutoMirrored.Filled.InsertDriveFile
                 },
                 contentDescription = null
             )

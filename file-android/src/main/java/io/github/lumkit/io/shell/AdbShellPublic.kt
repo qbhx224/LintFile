@@ -29,24 +29,25 @@ object AdbShellPublic {
         synchronized(pool) {
             while (pool.isNotEmpty()) {
                 val key = pool.keys.first()
-                val keepShell = pool.get(key)!!
+                val keepShell = pool[key]!!
                 pool.remove(key)
                 keepShell.tryExit()
             }
         }
     }
 
-    val defaultKeepShell = AdbShell()
-    val secondaryKeepShell = AdbShell()
+    val defaultKeepShell by lazy { AdbShell() }
+    val secondaryKeepShell by lazy { AdbShell() }
 
-    val shell = getInstance("shell-default")
-//    val shizuku = getInstance("shizuku-default", IOMode.SHIZUKU)
+    val shell by lazy { getInstance("shell-default") }
 
     fun getDefaultInstance(): AdbShell {
-        return if (defaultKeepShell.isIdle || !secondaryKeepShell.isIdle) {
+        return if (defaultKeepShell.isIdle) {
             defaultKeepShell
-        } else {
+        } else if (secondaryKeepShell.isIdle) {
             secondaryKeepShell
+        } else {
+            defaultKeepShell
         }
     }
 
@@ -56,10 +57,14 @@ object AdbShellPublic {
             stringBuilder.append(cmd)
             stringBuilder.append("\n\n")
         }
-        return doCmdSync(stringBuilder.toString()) != "error"
+        return try {
+            doCmdSync(stringBuilder.toString())
+            true
+        } catch (e: ShellException) {
+            false
+        }
     }
 
-    //执行脚本
     fun doCmdSync(cmd: String): String {
         return getDefaultInstance().doCmdSync(cmd)
     }

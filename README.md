@@ -9,15 +9,14 @@
 # 简介
 
 这是一个多功能文件库，它简化了开发人员访问安卓设备磁盘文件的步骤。
-它支持基本的Java文件Api，集成了高级文件操作Api，如“SuFile”和“ShizukuFile”， 并支持访问权限的自动申请。
+它支持基本的Java文件Api，集成了高级文件操作Api，如"ShizukuFile"， 并支持访问权限的自动申请。
 开发者不再需要关心适配不同Android版本的新变化，一切都交给LintFile！
 
 # 特性
 
 - [x] 适配Android 7.0~Android 15
-- [x] 支持Root文件操作和Root打开文件IO流
 - [x] 支持Shizuku文件操作和Shizuku打开文件操作流
-- [x] 高性能的Root文件操作和Shizuku文件操作
+- [x] 高性能的Shizuku文件操作
 - [x] 简单易用的File Api（与java.io.File类似）
 - [x] 自动化权限申请
 
@@ -34,7 +33,7 @@
 2. 导入lint-file依赖
    ```kotlin
    dependencies {
-       implementation("io.github.lumkit:lint-file:1.0.5")
+       implementation("io.github.lumkit:lint-file:2.0.0")
    }
    ```
 
@@ -65,7 +64,7 @@
       ```kotlin
       // 1. 先获取LintFile实例
       // file扩展函数会根据文件路径自动创建合适的LintFile实例
-      // 你也可以手动创建LintFile的不同实现：DefaultFile、StorageAccessFrameworkFile、SuFile和ShizukuFile
+      // 你也可以手动创建LintFile的不同实现：DefaultFile、StorageAccessFrameworkFile和ShizukuFile
       val lintFile = file("/xxx/xxx/xxx")
    
       // 2. 通过use扩展函数进行自动化权限申请
@@ -97,10 +96,6 @@
                   PermissionType.STORAGE_ACCESS_FRAMEWORK -> {
                       activity.requestAccessPermission(0x000002, openFile.path)
                   }
-                  // Root权限
-                  PermissionType.SU -> {
-                      // 这里没啥好实现的
-                  }
                   // Shizuku权限
                   PermissionType.SHIZUKU -> try {
                       ShizukuUtil.requestPermission()
@@ -126,6 +121,7 @@
       class MainActivity : ComponentActivity() {
    
           // 在此保存/Android/data的文件访问权限！
+          @Suppress("DEPRECATION")
           override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
               super.onActivityResult(requestCode, resultCode, data)
               takePersistableUriPermission(0x000002, requestCode, resultCode, data)
@@ -166,4 +162,11 @@
          ...
          ```
 
-# End
+# 作者
+
+- **原作者**：[lumkit](https://github.com/lumkit)
+- **二改作者**：[qbhx](https://github.com/qbhx)
+
+# 许可证
+
+本项目基于 [GNU LGPL v2.1](LICENSE) 许可证开源。

@@ -2,6 +2,8 @@ package io.github.lumkit.io.impl
 
 import io.github.lumkit.io.LintFile
 import io.github.lumkit.io.shell.AdbShellPublic
+import io.github.lumkit.io.shell.ShellException
+import io.github.lumkit.io.stripHiddenChar
 
 class ShizukuFile : LintFile {
 
@@ -9,51 +11,83 @@ class ShizukuFile : LintFile {
     constructor(file: LintFile) : super(file)
     constructor(file: LintFile, child: String) : super(file, child)
 
-    override fun exists(): Boolean =
-        AdbShellPublic.doCmdSync("[ -e \"${path.replace("\u200d", "")}\" ] && echo 1 || echo 0") == "1"
+    private fun safePath(): String = path.stripHiddenChar().replace("\"", "\\\"").replace("$", "\$")
 
-    override fun getParent(): String = _file.parent?.replace("\u200d", "") ?: ""
+    override fun exists(): Boolean =
+        try {
+            AdbShellPublic.doCmdSync("[ -e \"${safePath()}\" ] && echo 1 || echo 0") == "1"
+        } catch (e: ShellException) {
+            false
+        }
+
+    override fun getParent(): String = _file.parent?.stripHiddenChar() ?: ""
 
     override fun getParentFile(): LintFile = ShizukuFile(getParent())
 
     override fun canRead(): Boolean =
-        AdbShellPublic.doCmdSync("[ -r \"${path.replace("\u200d", "")}\" ] && echo 1 || echo 0") == "1"
+        try {
+            AdbShellPublic.doCmdSync("[ -r \"${safePath()}\" ] && echo 1 || echo 0") == "1"
+        } catch (e: ShellException) {
+            false
+        }
 
     override fun canWrite(): Boolean =
-        AdbShellPublic.doCmdSync("[ -w \"${path.replace("\u200d", "")}\" ] && echo 1 || echo 0") == "1"
+        try {
+            AdbShellPublic.doCmdSync("[ -w \"${safePath()}\" ] && echo 1 || echo 0") == "1"
+        } catch (e: ShellException) {
+            false
+        }
 
     override fun isDirectory(): Boolean =
-        AdbShellPublic.doCmdSync("[ -d \"${path.replace("\u200d", "")}\" ] && echo 1 || echo 0") == "1"
+        try {
+            AdbShellPublic.doCmdSync("[ -d \"${safePath()}\" ] && echo 1 || echo 0") == "1"
+        } catch (e: ShellException) {
+            false
+        }
 
     override fun isFile(): Boolean =
-        AdbShellPublic.doCmdSync("[ -f \"${path.replace("\u200d", "")}\" ] && echo 1 || echo 0") == "1"
+        try {
+            AdbShellPublic.doCmdSync("[ -f \"${safePath()}\" ] && echo 1 || echo 0") == "1"
+        } catch (e: ShellException) {
+            false
+        }
 
     override fun lastModified(): Long = try {
-        AdbShellPublic.doCmdSync("stat -c '%Y' \"${path.replace("\u200d", "")}\"").toLong()
+        AdbShellPublic.doCmdSync("stat -c '%Y' \"${safePath()}\"").toLong()
     } catch (e: Exception) {
-        e.printStackTrace()
         0
     }
 
     override fun length(): Long = try {
-        AdbShellPublic.doCmdSync("stat -c '%s' \"${path.replace("\u200d", "")}\"").toLong()
+        AdbShellPublic.doCmdSync("stat -c '%s' \"${safePath()}\"").toLong()
     } catch (e: Exception) {
-        e.printStackTrace()
         0
     }
 
     override fun createNewFile(): Boolean =
-        AdbShellPublic.doCmdSync("[ ! -e \"${path.replace("\u200d", "")}\" ] && echo -n > \"${path.replace("\u200d", "")}\" && echo 1 || echo 0") == "1"
+        try {
+            AdbShellPublic.doCmdSync("[ ! -e \"${safePath()}\" ] && echo -n > \"${safePath()}\" && echo 1 || echo 0") == "1"
+        } catch (e: ShellException) {
+            false
+        }
 
     override fun delete(): Boolean =
-        AdbShellPublic.doCmdSync("(rm -rf \"${path.replace("\u200d", "")}\") && echo 1 || echo 0") == "1"
+        try {
+            AdbShellPublic.doCmdSync("(rm -rf \"${safePath()}\") && echo 1 || echo 0") == "1"
+        } catch (e: ShellException) {
+            false
+        }
 
     override fun list(): Array<String> {
         if (!isDirectory())
             return arrayOf()
-        val cmd = "ls -a \"${path.replace("\u200d", "")}\""
+        val cmd = "ls -a \"${safePath()}\""
 
-        val list = ArrayList(AdbShellPublic.doCmdSync(cmd).split("\n"))
+        val list = try {
+            ArrayList(AdbShellPublic.doCmdSync(cmd).split("\n"))
+        } catch (e: ShellException) {
+            return arrayOf()
+        }
         val iterator = list.listIterator()
 
         while (iterator.hasNext()) {
@@ -63,7 +97,7 @@ class ShizukuFile : LintFile {
             }
         }
 
-        return list.map { "${path.replace("\u200d", "")}/$it" }.toTypedArray()
+        return list.map { "${path.stripHiddenChar()}/$it" }.toTypedArray()
     }
 
     override fun list(filter: (String) -> Boolean): Array<String> = list().filter { filter(it) }.toTypedArray()
@@ -72,15 +106,28 @@ class ShizukuFile : LintFile {
 
     override fun listFiles(filter: (LintFile) -> Boolean): Array<LintFile> = listFiles().filter { filter(it) }.toTypedArray()
 
-    override fun mkdirs(): Boolean = AdbShellPublic.doCmdSync("mkdir -p \"${path.replace("\u200d", "")}\" && echo 1 || echo 0") == "1"
+    override fun mkdirs(): Boolean =
+        try {
+            AdbShellPublic.doCmdSync("mkdir -p \"${safePath()}\" && echo 1 || echo 0") == "1"
+        } catch (e: ShellException) {
+            false
+        }
 
     override fun renameTo(dest: String): Boolean {
-        val cmd = "mv -f \"${path.replace("\u200d", "")}\" \"${getParent()}/${dest.replace("\u200d", "")}\" && echo 1 || echo 0"
-        return AdbShellPublic.doCmdSync(cmd) == "1"
+        val cmd = "mv -f \"${safePath()}\" \"${getParent()}/${dest.stripHiddenChar().replace("\"", "\\\"").replace("$", "\$")}\" && echo 1 || echo 0"
+        return try {
+            AdbShellPublic.doCmdSync(cmd) == "1"
+        } catch (e: ShellException) {
+            false
+        }
     }
 
     fun clear(): Boolean {
-        val cmd = "(echo -n > \"${path.replace("\u200d", "")}\") && echo 1 || echo 0"
-        return AdbShellPublic.doCmdSync(cmd) == "1"
+        val cmd = "(echo -n > \"${safePath()}\") && echo 1 || echo 0"
+        return try {
+            AdbShellPublic.doCmdSync(cmd) == "1"
+        } catch (e: ShellException) {
+            false
+        }
     }
 }

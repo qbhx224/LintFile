@@ -1,10 +1,9 @@
 package io.github.lumkit.io.shell
 
 import android.content.pm.PackageManager
+import android.os.RemoteException
 import rikka.shizuku.Shizuku
 import rikka.shizuku.Shizuku.OnRequestPermissionResultListener
-import java.io.BufferedInputStream
-import java.io.ByteArrayOutputStream
 
 
 object ShizukuUtil {
@@ -27,32 +26,24 @@ object ShizukuUtil {
 
     fun checkPermission(): Boolean = try {
         Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-    }catch (e: Exception) {
+    } catch (e: RemoteException) {
+        e.printStackTrace()
+        false
+    } catch (e: Exception) {
         e.printStackTrace()
         false
     }
 
+    fun isShizukuAvailable(): Boolean = try {
+        Shizuku.pingBinder() && checkPermission()
+    } catch (e: Exception) {
+        false
+    }
+
     fun runCmd(cmd: String): String? = try {
-        val p: Process = Shizuku.newProcess(arrayOf("sh"), null, null)
-        val os = p.outputStream
-        os.write("$cmd\nexit".toByteArray())
-        os.flush()
-        os.close()
-        val `is` = p.inputStream
-        val bis = BufferedInputStream(`is`)
-        val baos = ByteArrayOutputStream()
-        val bArr = ByteArray(8192)
-        var i: Int
-        while (bis.read(bArr).also { i = it } != -1) {
-            baos.write(bArr, 0, i)
-        }
-        val bytes = baos.toByteArray()
-        baos.close()
-        bis.close()
-        `is`.close()
-        String(bytes)
-    } catch (err: Exception) {
-        err.printStackTrace()
+        AdbShellPublic.doCmdSync(cmd)
+    } catch (e: ShellException) {
+        e.printStackTrace()
         null
     }
 

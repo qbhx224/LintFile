@@ -3,13 +3,13 @@ package io.github.lumkit.io
 import android.os.Build
 import android.os.Environment
 import android.system.ErrnoException
-import com.topjohnwu.superuser.Shell
 import io.github.lumkit.io.data.IoModel
 import io.github.lumkit.io.impl.DefaultFile
 import io.github.lumkit.io.impl.ShizukuFile
 import io.github.lumkit.io.impl.StorageAccessFrameworkFile
-import io.github.lumkit.io.impl.SuFile
 import io.github.lumkit.io.shell.AdbShellPublic
+import io.github.lumkit.io.shell.ShellException
+import io.github.lumkit.io.shell.ShellThreadPool
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
@@ -21,17 +21,15 @@ import java.util.UUID
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 
+internal fun String.stripHiddenChar(): String = replace("‍", "")
+
 /**
  * 创建一个通用的File
  */
 fun file(path: String): LintFile =
     when (LintFileConfiguration.instance.ioMode) {
-        IoModel.SU, IoModel.KSU -> SuFile(path)
-        IoModel.SUU -> SuFile(path)
         IoModel.SHIZUKU -> ShizukuFile(path)
-        else -> {
-            createUserFile(path)
-        }
+        else -> createUserFile(path)
     }
 
 /**
@@ -39,11 +37,8 @@ fun file(path: String): LintFile =
  */
 fun file(file: LintFile): LintFile =
     when (LintFileConfiguration.instance.ioMode) {
-        IoModel.SU, IoModel.KSU, IoModel.SUU -> SuFile(file)
         IoModel.SHIZUKU -> ShizukuFile(file)
-        else -> {
-            createUserFile(file.path)
-        }
+        else -> createUserFile(file.path)
     }
 
 /**
@@ -51,11 +46,8 @@ fun file(file: LintFile): LintFile =
  */
 fun file(dir: LintFile, child: String): LintFile =
     when (LintFileConfiguration.instance.ioMode) {
-        IoModel.SU, IoModel.KSU, IoModel.SUU -> SuFile(dir, child)
         IoModel.SHIZUKU -> ShizukuFile(dir, child)
-        else -> {
-            createUserFile(File(dir.path, child).absolutePath)
-        }
+        else -> createUserFile(File(dir.path, child).absolutePath)
     }
 
 /**
@@ -79,10 +71,10 @@ fun isSafDir(path: String): Boolean {
 }
 
 fun String.pathHandle(hide: Boolean = true): String {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hide && File(this.replace("Android", "Android\u200d")).canRead()) {
-        this.replace("Android", "Android\u200d")
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hide && File(this.replace("Android", "Android‍")).canRead()) {
+        this.replace("Android", "Android‍")
     } else {
-        this.replace("\u200d", "")
+        this.replace("‍", "")
     }
 }
 
@@ -90,13 +82,11 @@ fun String.pathHandle(hide: Boolean = true): String {
 @Throws(IOException::class)
 fun LintFile.openInputStream(): InputStream =
     when (this) {
-        is SuFile -> suFile.newInputStream()
-
         is StorageAccessFrameworkFile -> LintFileConfiguration.instance
             .context
             .contentResolver
             .openInputStream(path.documentReallyUri())
-            ?: throw throw IOException("No such file or directory")
+            ?: throw IOException("No such file or directory")
 
         is ShizukuFile -> newInputStream()
 
@@ -106,13 +96,11 @@ fun LintFile.openInputStream(): InputStream =
 @Throws(IOException::class)
 fun LintFile.openOutputStream(): OutputStream =
     when (this) {
-        is SuFile -> suFile.newOutputStream()
-
         is StorageAccessFrameworkFile -> LintFileConfiguration.instance
             .context
             .contentResolver
             .openOutputStream(path.documentReallyUri(), "rwt")
-            ?: throw throw IOException("No such file or directory")
+            ?: throw IOException("No such file or directory")
 
         is ShizukuFile -> newOutputStream()
         else -> FileOutputStream(path)
@@ -123,34 +111,38 @@ fun LintFile.openOutputStream(): OutputStream =
     java.io.IOException::class
 )
 fun createTempFIFO(): File {
-//    val fifo = File.createTempFile("lintfile-fifo-", null)
-//    fifo.delete()
-//    Os.mkfifo(fifo.path, 644)
-//    return fifo
-    val fifoDir = File(
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
-        ".lint-file-tmp"
-    )
-    if (!fifoDir.exists()) fifoDir.mkdirs()
-    val fifo = File(fifoDir, "lintfile-fifo-${UUID.randomUUID()}.tmp")
+    val tmpDir = getShizukuTmpDir()
+    if (!tmpDir.exists()) tmpDir.mkdirs()
+    val fifo = File(tmpDir, "lintfile-fifo-${UUID.randomUUID()}.tmp")
     fifo.createNewFile()
     return fifo
+}
+
+private fun getShizukuTmpDir(): File {
+    return if (Build.VERSION.SDK_INT >= 35) {
+        val dir = File(LintFileConfiguration.instance.context.cacheDir, "lint-file-tmp")
+        dir.mkdirs()
+        dir.setReadable(true, false)
+        dir.setWritable(true, false)
+        dir
+    } else {
+        File("/data/local/tmp", ".lint-file-tmp")
+    }
 }
 
 private fun ShizukuFile.newInputStream(): InputStream {
     if (isDirectory() || !canRead()) throw FileNotFoundException("No such file or directory: $path")
     try {
         val fifo = createTempFIFO()
-        val cmd = "(cat \"$path\" > \"${fifo.absolutePath}\") && echo 1 || echo 0"
-        if (AdbShellPublic.doCmdSync(cmd) == "0")
+        val cmd = "(cat \"${path.stripHiddenChar()}\" > \"${fifo.absolutePath}\") && echo 1 || echo 0"
+        try {
+            AdbShellPublic.doCmdSync(cmd)
+        } catch (e: ShellException) {
+            fifo.delete()
             throw FileNotFoundException("cat: $path: Permission denied")
-        // Open the fifo only after the shell request
-        val stream = FutureTask<InputStream> {
-            FileInputStream(
-                fifo
-            )
         }
-        Shell.EXECUTOR.execute(stream)
+        val stream = FutureTask<InputStream> { FileInputStream(fifo) }
+        ShellThreadPool.submit { stream.run() }
         val inputStream = stream[FIFO_TIMEOUT.toLong(), TimeUnit.MILLISECONDS]
         return object : InputStream() {
             override fun read(): Int = inputStream.read()
@@ -171,7 +163,7 @@ private fun ShizukuFile.newInputStream(): InputStream {
     }
 }
 
-private const val FIFO_TIMEOUT = 250
+private const val FIFO_TIMEOUT = 2000
 
 private fun ShizukuFile.newOutputStream(): OutputStream {
     if (isDirectory()) throw FileNotFoundException("$path is not a file but a directory")
@@ -184,13 +176,16 @@ private fun ShizukuFile.newOutputStream(): OutputStream {
 
     try {
         val fifo = createTempFIFO()
-        val cmd = "(cat \"${fifo.absolutePath.replace("\u200d", "")}\" > \"${path.replace("\u200d", "")}\") && echo 1 || echo 0"
-        if (AdbShellPublic.doCmdSync(cmd) == "0")
+        val cmd = "(cat \"${fifo.absolutePath.stripHiddenChar()}\" > \"${path.stripHiddenChar()}\") && echo 1 || echo 0"
+        try {
+            AdbShellPublic.doCmdSync(cmd)
+        } catch (e: ShellException) {
+            fifo.delete()
             throw FileNotFoundException("Cannot write to file $path")
+        }
 
-        // Open the fifo only after the shell request
         val stream = FutureTask<OutputStream> { FileOutputStream(fifo) }
-        Shell.EXECUTOR.execute(stream)
+        ShellThreadPool.submit { stream.run() }
         val outputStream = stream[FIFO_TIMEOUT.toLong(), TimeUnit.MILLISECONDS]
         return object : OutputStream() {
             override fun write(b: Int) {
@@ -215,8 +210,10 @@ private fun ShizukuFile.newOutputStream(): OutputStream {
                 try {
                     outputStream.close()
                 } finally {
-                    val doCmdSync = AdbShellPublic.doCmdSync( "(mv -f \"${fifo.path}\" \"${path.replace("\u200d", "")}\") && echo 1 || echo 0")
-                    if (doCmdSync == "0") {
+                    try {
+                        AdbShellPublic.doCmdSync("(mv -f \"${fifo.path}\" \"${path.stripHiddenChar()}\") && echo 1 || echo 0")
+                    } catch (e: ShellException) {
+                        fifo.delete()
                         throw FileNotFoundException("Cannot write to file $path")
                     }
                 }

@@ -5,16 +5,14 @@ import java.io.IOException
 
 object ShellExecutor {
     private var extraEnvPath: String? = ""
-    private var defaultEnvPath = "" // /sbin:/system/sbin:/system/bin:/system/xbin:/odm/bin:/vendor/bin:/vendor/xbin
-
+    private var defaultEnvPath = ""
 
     fun setExtraEnvPath(extraEnvPath: String) {
         ShellExecutor.extraEnvPath = extraEnvPath
     }
 
     private fun getEnvPath(): String? {
-        // FIXME:非root模式下，默认的 TMPDIR=/data/local/tmp 变量可能会导致某些需要写缓存的场景（例如使用source指令）脚本执行失败！
-        if (extraEnvPath != null && !extraEnvPath.isNullOrBlank()) {
+        if (!extraEnvPath.isNullOrBlank()) {
             if (defaultEnvPath.isEmpty()) {
                 defaultEnvPath = try {
                     val process = Runtime.getRuntime().exec("sh")
@@ -28,7 +26,7 @@ object ShellExecutor {
                     inputStream.close()
                     process.destroy()
                     val path = String(cache, 0, length).trim { it <= ' ' }
-                    if (path.length > 0) {
+                    if (path.isNotEmpty()) {
                         path
                     } else {
                         throw RuntimeException("未能获取到\$PATH参数")
@@ -44,18 +42,9 @@ object ShellExecutor {
     }
 
     @Throws(IOException::class)
-    private fun getProcess(run: String): Process? {
+    fun getRuntime(): Process? {
         val env = getEnvPath()
-        val runtime = Runtime.getRuntime()
-        /*
-        // 部分机型会有Aborted错误
-        if (env != null) {
-            return runtime.exec(run, new String[]{
-                env
-            });
-        }
-        */
-        val process = runtime.exec(run)
+        val process = Runtime.getRuntime().exec("sh")
         if (env != null) {
             val outputStream = process.outputStream
             outputStream.write("export ".toByteArray())
@@ -64,16 +53,6 @@ object ShellExecutor {
             outputStream.flush()
         }
         return process
-    }
-
-    @Throws(IOException::class)
-    fun getSuperUserRuntime(): Process? {
-        return getProcess("su")
-    }
-
-    @Throws(IOException::class)
-    fun getRuntime(): Process? {
-        return getProcess("sh")
     }
 
     @Throws(IOException::class)

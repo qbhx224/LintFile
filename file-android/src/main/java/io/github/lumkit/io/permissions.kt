@@ -1,16 +1,12 @@
 package io.github.lumkit.io
 
 import android.Manifest
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
 import androidx.core.app.ActivityCompat
-import com.topjohnwu.superuser.Shell
 import io.github.lumkit.io.data.IoModel
 import io.github.lumkit.io.data.PermissionType
-import io.github.lumkit.io.impl.SuFile
-import io.github.lumkit.io.jni.LintJni
 import io.github.lumkit.io.shell.ShizukuUtil
 import rikka.shizuku.Shizuku
 
@@ -22,15 +18,8 @@ fun LintFile.use(
     granted: LintFile.() -> Unit
 ) {
     val instance = LintFileConfiguration.instance
-    val activity = instance.context
+    val context = instance.context
     when (instance.ioMode) {
-        IoModel.SU, IoModel.KSU, IoModel.SUU -> {
-            if (Shell.getShell().isRoot) {
-                granted()
-            } else {
-                onRequestPermission(PermissionType.SU)
-            }
-        }
         IoModel.SHIZUKU -> {
             if (ShizukuUtil.checkPermission() && Shizuku.pingBinder()) {
                 granted()
@@ -54,7 +43,7 @@ fun LintFile.use(
                     }
                 } else {
                     if (ActivityCompat.checkSelfPermission(
-                            activity,
+                            context,
                             Manifest.permission.WRITE_EXTERNAL_STORAGE
                         ) == PackageManager.PERMISSION_GRANTED
                     ) {
