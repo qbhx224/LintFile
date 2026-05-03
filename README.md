@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/github/license/lumkit/LintFile)](LICENSE)
 [![Version](https://img.shields.io/github/v/release/lumkit/LintFile?include_prereleases)](https://github.com/lumkit/LintFile/releases)
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.lumkit/lint-file)](https://central.sonatype.com/artifact/io.github.lumkit/lint-file/)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.qbhx224/lint-file)](https://central.sonatype.com/artifact/io.github.qbhx224/lint-file/)
 
 一个适用于Android平台的文件操作库 —— kt库。
 
@@ -33,7 +33,7 @@
 2. 导入lint-file依赖
    ```kotlin
    dependencies {
-       implementation("io.github.lumkit:lint-file:2.0.0")
+       implementation("io.github.qbhx224:lint-file:2.0.0")
    }
    ```
 

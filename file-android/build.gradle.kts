@@ -56,21 +56,8 @@ mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
     signAllPublications()
 
-    allprojects.forEach { project ->
-        project.afterEvaluate {
-            project.extensions.findByType(PublishingExtension::class.java)?.apply {
-                project.extensions.findByType(SigningExtension::class.java)?.apply {
-                    useGpgCmd()
-                    publishing.publications.withType(MavenPublication::class.java).forEach { publication ->
-                        sign(publication)
-                    }
-                }
-            }
-        }
-    }
-
     coordinates(
-        groupId = "io.github.lumkit",
+        groupId = "io.github.qbhx224",
         artifactId = "lint-file",
         version = libs.versions.lint.file.get()
     )
@@ -78,7 +65,7 @@ mavenPublishing {
     pom {
         name.set("lint-file-android")
         description.set("A file operation library suitable for Android platform.")
-        url.set("https://github.com/lumkit/LintFile")
+        url.set("https://github.com/qbhx224/LintFile")
 
         licenses {
             license {
@@ -93,12 +80,16 @@ mavenPublishing {
                 email.set("2205903933@qq.com")
                 url.set("https://github.com/lumkit")
             }
+            developer {
+                name.set("qbhx224")
+                url.set("https://github.com/qbhx224")
+            }
         }
 
         scm {
-            url.set("https://github.com/lumkit/LintFile")
-            connection.set("scm:git:git://github.com/lumkit/LintFile.git")
-            developerConnection.set("scm:git:ssh://github.com/lumkit/LintFile.git")
+            url.set("https://github.com/qbhx224/LintFile")
+            connection.set("scm:git:git://github.com/qbhx224/LintFile.git")
+            developerConnection.set("scm:git:ssh://github.com/qbhx224/LintFile.git")
         }
     }
 }
