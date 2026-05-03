@@ -165,7 +165,7 @@
 # 作者
 
 - **原作者**：[lumkit](https://github.com/lumkit)
-- **二改作者**：[qbhx](https://github.com/qbhx)
+- **二改作者**：[qbhx224](https://github.com/qbhx224)
 
 # 许可证
 
