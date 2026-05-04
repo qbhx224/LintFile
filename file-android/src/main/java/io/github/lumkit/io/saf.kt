@@ -166,6 +166,7 @@ fun Activity.takePersistableUriPermission(
                                 or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                         )
             )
+            LintFileConfiguration.instance.useSaf = true
         }
     }
 }

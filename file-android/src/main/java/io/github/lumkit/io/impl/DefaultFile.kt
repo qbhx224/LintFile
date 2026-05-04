@@ -1,6 +1,7 @@
 package io.github.lumkit.io.impl
 
 import io.github.lumkit.io.LintFile
+import io.github.lumkit.io.stripHiddenChar
 import java.io.File
 
 /**
@@ -32,7 +33,7 @@ class DefaultFile : LintFile {
 
     override fun createNewFile(): Boolean = _file.createNewFile()
 
-    override fun delete(): Boolean = _file.delete()
+    override fun delete(): Boolean = _file.delete() || File(path.stripHiddenChar()).delete()
 
     override fun list(): Array<String> = _file.list()?.map {
         "$path${File.separator}$it"
@@ -57,6 +58,6 @@ class DefaultFile : LintFile {
 
     override fun mkdirs(): Boolean = _file.mkdirs()
 
-    override fun renameTo(dest: String): Boolean = _file.renameTo(File(dest))
+    override fun renameTo(dest: String): Boolean = _file.renameTo(File(dest)) || File(path.stripHiddenChar()).renameTo(File(dest.stripHiddenChar()))
 
 }

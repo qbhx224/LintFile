@@ -61,13 +61,21 @@ private fun createUserFile(path: String): LintFile =
     }
 
 fun isSafDir(path: String): Boolean {
-    val canRead = File(path.pathHandle()).canRead()
+    if (LintFileConfiguration.instance.useSaf &&
+        path.pathHandle(false).startsWith(
+            (File(Environment.getExternalStorageDirectory(), "Android").absolutePath + "/").pathHandle(false)
+        )) {
+        return true
+    }
+    val p = path.pathHandle()
+    val canRead = File(p).canRead()
+    val canWrite = File(p).canWrite()
     return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && path.pathHandle(false).startsWith(
         (File(
             Environment.getExternalStorageDirectory(),
             "Android"
         ).absolutePath + "/").pathHandle(false)
-    ) && !canRead
+    ) && (!canRead || !canWrite)
 }
 
 fun String.pathHandle(hide: Boolean = true): String {

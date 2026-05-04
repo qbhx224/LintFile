@@ -17,6 +17,7 @@ class LintFileConfiguration {
     internal lateinit var context: Context
     val isInitialized: Boolean get() = ::context.isInitialized
     var ioMode: IoModel = IoModel.NORMAL
+    var useSaf: Boolean = false
 
     fun init(context: Activity, fileConfig: LintFileConfig? = null) {
         this.context = context.applicationContext

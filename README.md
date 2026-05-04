@@ -1,7 +1,7 @@
 # Lint File
 
-[![License](https://img.shields.io/github/license/lumkit/LintFile)](LICENSE)
-[![Version](https://img.shields.io/github/v/release/lumkit/LintFile?include_prereleases)](https://github.com/lumkit/LintFile/releases)
+[![License](https://img.shields.io/github/license/qbhx224/LintFile)](LICENSE)
+[![Version](https://img.shields.io/github/v/release/qbhx224/LintFile?include_prereleases)](https://github.com/qbhx224/LintFile/releases)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.qbhx224/lint-file)](https://central.sonatype.com/artifact/io.github.qbhx224/lint-file/)
 
 一个适用于Android平台的文件操作库 —— kt库。
@@ -14,11 +14,13 @@
 
 # 特性
 
-- [x] 适配Android 7.0~Android 15
+- [x] 适配Android 7.0~Android 16
 - [x] 支持Shizuku文件操作和Shizuku打开文件操作流
 - [x] 高性能的Shizuku文件操作
 - [x] 简单易用的File Api（与java.io.File类似）
 - [x] 自动化权限申请
+- [x] 支持通过SAF框架访问`/Android/data`目录
+- [x] 智能路径检测：自动判断读写能力并选择最优文件操作模式
 
 # 将Lint File导入你的项目
 
@@ -33,7 +35,7 @@
 2. 导入lint-file依赖
    ```kotlin
    dependencies {
-       implementation("io.github.qbhx224:lint-file:2.0.0")
+       implementation("io.github.qbhx224:lint-file:2.1.0")
    }
    ```
 
@@ -161,6 +163,23 @@
          // 进行写入操作，需要手动关闭流
          ...
          ```
+
+# 更新日志
+
+## v2.1.0
+
+- 新增 `useSaf` 标志，支持在有SAF权限时强制使用SAF模式
+- 改进 `isSafDir()` 逻辑，增加 `canWrite()` 检测，智能判断是否需要SAF
+- `DefaultFile.delete()` 和 `renameTo()` 增加 `stripHiddenChar()` 兜底机制
+- `takePersistableUriPermission()` 授权成功后自动启用SAF模式
+- 适配Android 16
+
+## v2.0.0
+
+- 移除SU/KSU/SUU支持
+- 重写Shell管理架构，修复竞态条件和无限阻塞问题
+- 改进Shizuku兼容性
+- 修复内存泄漏问题
 
 # 作者
 
