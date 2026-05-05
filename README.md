@@ -35,7 +35,7 @@
 2. 导入lint-file依赖
    ```kotlin
    dependencies {
-       implementation("io.github.qbhx224:lint-file:2.1.0")
+       implementation("io.github.qbhx224:lint-file:2.1.1")
    }
    ```
 
@@ -166,7 +166,7 @@
 
 # 更新日志
 
-## v2.1.0
+## v2.1.1
 
 - 新增 `useSaf` 标志，支持在有SAF权限时强制使用SAF模式
 - 改进 `isSafDir()` 逻辑，增加 `canWrite()` 检测，智能判断是否需要SAF
