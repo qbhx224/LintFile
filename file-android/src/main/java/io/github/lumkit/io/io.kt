@@ -67,9 +67,8 @@ fun isSafDir(path: String): Boolean {
         )) {
         return true
     }
-    val p = path.pathHandle()
-    val canRead = File(p).canRead()
-    val canWrite = File(p).canWrite()
+    val canRead = File(path).canRead()
+    val canWrite = File(path).canWrite()
     return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && path.pathHandle(false).startsWith(
         (File(
             Environment.getExternalStorageDirectory(),
