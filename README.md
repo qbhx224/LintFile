@@ -16,11 +16,13 @@
 
 - [x] 适配Android 7.0~Android 16
 - [x] 支持Shizuku文件操作和Shizuku打开文件操作流
-- [x] 高性能的Shizuku文件操作
+- [x] 高性能的Shizuku文件操作：批量目录属性一次 shell 调用返回
 - [x] 简单易用的File Api（与java.io.File类似）
 - [x] 自动化权限申请
 - [x] 支持通过SAF框架访问`/Android/data`目录
 - [x] 智能路径检测：自动判断读写能力并选择最优文件操作模式
+- [x] 支持访问任意应用 `/Android/data/<包名>` 私有目录（Shizuku模式）
+- [x] 支持递归删除目录树与批量获取目录属性
 
 # 将Lint File导入你的项目
 
@@ -61,7 +63,22 @@
    }
    ```
 
-4. 开始使用
+4. 配置访问模式（可选，默认 NORMAL）
+   ```kotlin
+   // 通过 LintFileConfig 指定 IO 模式
+   LintFileConfiguration.instance.init(
+       this,
+       LintFileConfig(ioModel = IoModel.SHIZUKU) // NORMAL(默认) / SHIZUKU
+   )
+
+   // SHIZUKU 模式可访问任意应用的 /Android/data 私有目录
+   // 检查 Shizuku 是否可用,未授权时发起授权
+   if (!ShizukuUtil.isShizukuAvailable()) {
+       ShizukuUtil.requestPermission()
+   }
+   ```
+
+5. 开始使用
    * 自动化权限
       ```kotlin
       // 1. 先获取LintFile实例
@@ -94,10 +111,10 @@
                           activity.startActivity(intent)
                       }
                   }
-                  // SAF框架文件访问权限
-                  PermissionType.STORAGE_ACCESS_FRAMEWORK -> {
-                      activity.requestAccessPermission(0x000002, openFile.path)
-                  }
+                   // SAF框架文件访问权限
+                   PermissionType.STORAGE_ACCESS_FRAMEWORK -> {
+                       activity.requestAccessPermission(0x000002, lintFile.path)
+                   }
                   // Shizuku权限
                   PermissionType.SHIZUKU -> try {
                       ShizukuUtil.requestPermission()
@@ -118,7 +135,8 @@
           }
       )
       ```
-      不要忘了！
+      > **提示**: 权限授予完成后需要**重新调用** `use()` 才会进入 `granted` 作用域,建议在权限回调中重新触发业务流程。
+       不要忘了！
       ```kotlin
       class MainActivity : ComponentActivity() {
    
@@ -176,6 +194,14 @@
       // 递归删除整个目录树(与 delete() 不同,会删除目录内所有内容,请谨慎使用)
       val deleted = file("/sdcard/Android/data/com.example").deleteRecursively()
       ```
+
+# 注意事项
+
+- **访问 `/Android/data` 目录**（Android 11+ 默认限制）：
+  - **NORMAL 模式**：部分设备可通过零宽连接符路径绕过系统拦截，无需任何授权；此方式依赖设备系统实现，可能随系统版本失效，不建议作为唯一方案
+  - **SHIZUKU 模式**：可可靠访问任意应用的 `/Android/data/<包名>` 目录并完成增删改查，推荐用于该场景
+- **Android 16**：`所有文件访问权限`（MANAGE_EXTERNAL_STORAGE）改为**安装时授予**，运行期跳转设置页不再生效；如需访问共享存储，请在安装应用时勾选
+- **`delete()` 与 `deleteRecursively()`**：`delete()` 与 `java.io.File` 语义一致，仅删除文件或空目录；递归删除整个目录树请显式调用 `deleteRecursively()`
 
 # 更新日志
 
