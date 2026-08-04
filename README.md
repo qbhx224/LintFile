@@ -35,7 +35,7 @@
 2. 导入lint-file依赖
    ```kotlin
    dependencies {
-       implementation("io.github.qbhx224:lint-file:2.1.1")
+       implementation("io.github.qbhx224:lint-file:2.2.0")
    }
    ```
 
@@ -164,7 +164,47 @@
          ...
          ```
 
+   * 批量文件操作
+      ```kotlin
+      // 一次调用获取目录全部子项的名称/大小/修改时间/类型
+      // Shizuku 模式下仅发起一次 shell 调用,遍历大目录性能远超逐项查询
+      val infos = file("/sdcard/Android/data/com.example").listFilesWithAttributes()
+      infos.forEach { info ->
+          println("${info.name} ${info.size} ${info.lastModified} ${info.isDirectory}")
+      }
+
+      // 递归删除整个目录树(与 delete() 不同,会删除目录内所有内容,请谨慎使用)
+      val deleted = file("/sdcard/Android/data/com.example").deleteRecursively()
+      ```
+
 # 更新日志
+
+## v2.2.0
+
+**修复**
+- Shizuku 模式 `lastModified()` 返回秒级时间戳未转为毫秒,导致显示 1970-01-21 等错误日期
+- `delete()` 曾使用 `rm -rf` 递归删除,违反 `java.io.File.delete()` 语义;现仅删除文件/空目录,递归删除需显式调用 `deleteRecursively()`
+- FIFO 流改用真正的 `mkfifo` 管道(此前为普通文件,读取端可能在写入前读到 EOF 导致数据丢失),并支持残留 FIFO 自动清理
+- 共享 shell 不再因等待锁超时被强制杀死(此前大文件传输超过 10s 会被并发调用中断,导致传输损坏)
+- 大文件传输命令超时从 30s 提升至 30 分钟,`close()` 不再永久阻塞
+- `lastModified()`/`length()` 失败返回值统一为 0(与 `java.io.File` 一致)
+
+**新增**
+- `listFilesWithAttributes()` 批量属性接口:一次 `ls -la` 返回整目录的名称/大小/修改时间/类型
+- `deleteRecursively()` 显式递归删除 API
+- 单元测试:命令转义、路径解析、`ls` 输出解析、时间戳换算等 30 个用例
+
+**改进**
+- 零宽连接符绕过探测改为子树根 `list()` 校验(比 `canRead` 可靠,部分设备 canRead 为 true 但实际仍被拦截),结果按子树缓存
+- `isSafDir()` 探测结果缓存,避免逐文件 syscall;绕过可用时不再强制走 SAF
+- 使用 POSIX 单引号转义重构所有 shell 命令,杜绝文件名导致的命令注入
+- FIFO 流读写端并行消费,不再死等管道缓冲区;异常路径自动清理临时 FIFO,消除泄漏
+- 路径规范化重构:`pathHandle()` 改为幂等规范化,消除零宽连接符重复叠加导致的路径误判
+- SAF 授权根重构:记录持久化授权树 URI,消灭硬编码目录层级,支持 SD 卡等任意卷
+- API 对齐:`list()`/`list(filter)` 改为返回纯文件名,与 `java.io.File` 语义一致
+- 权限智能判断:应用专属目录直通无需权限;Android 11+ 正确区分权限类型
+- 生命周期改进:`init()` 支持任意 `Context`;Shizuku 监听器注册去重
+- `LintFile` 增加 `equals()`/`hashCode()`/`toString()`
 
 ## v2.1.1
 

@@ -69,6 +69,10 @@ object AdbShellPublic {
         return getDefaultInstance().doCmdSync(cmd)
     }
 
+    fun doCmdSync(cmd: String, timeoutMs: Long): String {
+        return getDefaultInstance().doCmdSync(cmd, timeoutMs)
+    }
+
     fun tryExit() {
         defaultKeepShell.tryExit()
         secondaryKeepShell.tryExit()

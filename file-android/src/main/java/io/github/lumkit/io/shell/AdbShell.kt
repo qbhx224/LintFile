@@ -12,13 +12,14 @@ class AdbShell {
     private var process: Process? = null
     private var out: OutputStream? = null
     private var reader: BufferedReader? = null
+
+    @Volatile
     private var currentIsIdle = true
     val isIdle: Boolean
         get() = currentIsIdle
 
     private val mLock = ReentrantLock()
     private val LOCK_TIMEOUT = 10000L
-    private var enterLockTime = 0L
 
     fun tryExit() {
         try {
@@ -32,7 +33,6 @@ class AdbShell {
         } catch (e: Exception) {
             Log.w("AdbShell", "Error destroying process: ${e.message}")
         }
-        enterLockTime = 0L
         out = null
         reader = null
         process = null
@@ -43,7 +43,6 @@ class AdbShell {
         if (process != null) return
         try {
             mLock.lockInterruptibly()
-            enterLockTime = System.currentTimeMillis()
             if (process != null) return // double-check after lock acquired
             process = ShellExecutor.getShizukuProcess()
             out = process?.outputStream
@@ -53,7 +52,6 @@ class AdbShell {
             Log.e("AdbShell", "Failed to start shell: ${ex.message}")
             tryExit()
         } finally {
-            enterLockTime = 0L
             if (mLock.isHeldByCurrentThread) mLock.unlock()
         }
     }
@@ -77,12 +75,19 @@ class AdbShell {
     private val endTagBytes = "echo '$endTag'\n".toByteArray(Charset.defaultCharset())
 
     fun doCmdSync(cmd: String, timeoutMs: Long = 30000): String {
-        if (mLock.isLocked && enterLockTime > 0 && System.currentTimeMillis() - enterLockTime > LOCK_TIMEOUT) {
-            tryExit()
-        }
         getRuntimeShell()
+        // 等待锁有上限,但绝不中断正在执行的命令:kill 共享 shell 会导致
+        // 正在进行的 FIFO 传输损坏。每条命令本身有 timeoutMs 超时兜底。
+        val locked = try {
+            mLock.tryLock(LOCK_TIMEOUT, TimeUnit.MILLISECONDS)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw ShellException("Interrupted while waiting for shell lock", e)
+        }
+        if (!locked) {
+            throw ShellException("Shell is busy, another command is still running")
+        }
         try {
-            mLock.lockInterruptibly()
             currentIsIdle = false
             out?.run {
                 write("$cmd\n".toByteArray(Charset.defaultCharset()))
@@ -131,7 +136,6 @@ class AdbShell {
             tryExit()
             throw ShellException("Shell command failed: ${e.message}", e)
         } finally {
-            enterLockTime = 0L
             if (mLock.isHeldByCurrentThread) mLock.unlock()
             currentIsIdle = true
         }

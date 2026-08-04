@@ -1,19 +1,15 @@
 package io.github.lumkit.io.impl
 
-import android.os.Build
 import androidx.documentfile.provider.DocumentFile
 import io.github.lumkit.io.LintFile
 import io.github.lumkit.io.LintFileConfiguration
-import io.github.lumkit.io.absolutePath
-import io.github.lumkit.io.androidPath
-import io.github.lumkit.io.documentFileUri
+import io.github.lumkit.io.LintFileInfo
+import io.github.lumkit.io.authorityRootPath
 import io.github.lumkit.io.documentReallyUri
 import io.github.lumkit.io.primaryChildPath
 import io.github.lumkit.io.stripHiddenChar
-import io.github.lumkit.io.uri
 import java.io.File
 import java.io.FileNotFoundException
-import java.io.IOException
 
 class StorageAccessFrameworkFile : LintFile {
 
@@ -21,7 +17,7 @@ class StorageAccessFrameworkFile : LintFile {
     constructor(file: LintFile) : super(file)
     constructor(file: LintFile, child: String) : super(file, child)
 
-    private val context = LintFileConfiguration.instance.context;
+    private val context = LintFileConfiguration.instance.context
     internal val documentFile: DocumentFile? = DocumentFile.fromTreeUri(context, path.stripHiddenChar().documentReallyUri(false))
 
     override fun exists(): Boolean =
@@ -44,10 +40,10 @@ class StorageAccessFrameworkFile : LintFile {
         this.documentFile?.isFile ?: false
 
     override fun lastModified(): Long =
-        this.documentFile?.lastModified() ?: -1
+        this.documentFile?.lastModified() ?: 0
 
     override fun length(): Long =
-        this.documentFile?.length() ?: -1
+        this.documentFile?.length() ?: 0
 
     override fun createNewFile(): Boolean {
         if (exists())
@@ -62,93 +58,69 @@ class StorageAccessFrameworkFile : LintFile {
     override fun delete(): Boolean =
         this.documentFile?.delete() ?: false
 
+    // DocumentsProvider 的 deleteDocument 对目录递归删除整个子树
+    override fun deleteRecursively(): Boolean =
+        this.documentFile?.delete() ?: false
+
     override fun list(): Array<String> {
         val list = ArrayList<String>()
-        if (this.documentFile != null) {
-            val listFiles = this.documentFile.listFiles()
-            list.addAll(listFiles.map { it.uri.absolutePath().stripHiddenChar() })
+        this.documentFile?.listFiles()?.forEach {
+            list.add(it.name ?: "")
         }
         return list.toTypedArray()
     }
 
-    override fun list(filter: (String) -> Boolean): Array<String> {
-        val list = ArrayList<String>()
-        if (this.documentFile != null) {
-            val listFiles = this.documentFile.listFiles()
-            list.addAll(
-                listFiles.filter { filter(it.name ?: "") }
-                    .map { it.uri.absolutePath().stripHiddenChar() }
-            )
-        }
-        return list.toTypedArray()
-    }
+    override fun list(filter: (String) -> Boolean): Array<String> =
+        this.documentFile?.listFiles()
+            ?.map { it.name ?: "" }
+            ?.filter { filter(it) }
+            ?.toTypedArray() ?: arrayOf()
 
     override fun listFiles(): Array<LintFile> {
         val list = ArrayList<StorageAccessFrameworkFile>()
-        this.list().forEach {
-            list.add(StorageAccessFrameworkFile(it))
+        this.documentFile?.listFiles()?.forEach { child ->
+            list.add(StorageAccessFrameworkFile(File(path.stripHiddenChar(), child.name ?: "").absolutePath))
         }
         return list.toTypedArray()
     }
 
-    override fun listFiles(filter: (LintFile) -> Boolean): Array<LintFile> {
-        val list = ArrayList<StorageAccessFrameworkFile>()
-        this.list().forEach {
-            val file = StorageAccessFrameworkFile(it)
-            if (filter(file))
-                list.add(file)
-        }
-        return list.toTypedArray()
-    }
+    override fun listFiles(filter: (LintFile) -> Boolean): Array<LintFile> =
+        listFiles().filter { filter(it) }.toTypedArray()
+
+    override fun listFilesWithAttributes(): Array<LintFileInfo> =
+        this.documentFile?.listFiles()?.map {
+            LintFileInfo(
+                name = it.name ?: "",
+                size = it.length(),
+                lastModified = it.lastModified(),
+                isDirectory = it.isDirectory,
+                isFile = it.isFile
+            )
+        }?.toTypedArray() ?: arrayOf()
 
     override fun mkdirs(): Boolean {
         if (exists())
             return true
 
-        var startPath = startPath()
-        val endPath = endPath()
-
-        if (endPath.isEmpty())
+        val childPath = path.primaryChildPath()
+        if (childPath.isEmpty())
             return true
 
-        val names = endPath.substring(1).split("/")
-        names.forEach {
-            val p = File(startPath, it).absolutePath
-            val safFile = StorageAccessFrameworkFile(p)
-            if (!safFile.exists()) {
-                StorageAccessFrameworkFile(startPath).documentFile?.createDirectory(it) ?: throw FileNotFoundException("Cannot write to file $path")
+        var current = path.authorityRootPath()
+        childPath.trimStart('/').split("/").forEach { name ->
+            if (name.isNotEmpty()) {
+                current = File(current, name).absolutePath
+                val safFile = StorageAccessFrameworkFile(current)
+                if (!safFile.exists()) {
+                    StorageAccessFrameworkFile(File(current).parent!!).documentFile
+                        ?.createDirectory(name)
+                        ?: throw FileNotFoundException("Cannot write to file $path")
+                }
             }
-            startPath = p
         }
-        return StorageAccessFrameworkFile(startPath).exists()
-    }
-
-    private fun startPath(): String {
-        val path = path.stripHiddenChar()
-        val list = (if (path.startsWith("/")) {
-            path.substring(1)
-        } else path).split("/")
-        val builder = StringBuilder()
-        for (i in 0 until if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) 6 else 5) {
-            builder.append("/")
-                .append(list[i])
-        }
-        return builder.toString()
-    }
-
-    private fun endPath(): String {
-        val path = path.stripHiddenChar()
-        val list = (if (path.startsWith("/")) {
-            path.substring(1)
-        } else path).split("/")
-        val builder = StringBuilder()
-        for (i in (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) 6 else 5) until list.size) {
-            builder.append("/")
-                .append(list[i])
-        }
-        return builder.toString()
+        return StorageAccessFrameworkFile(current).exists()
     }
 
     override fun renameTo(dest: String): Boolean =
-        this.documentFile?.renameTo(dest) ?: false
+        this.documentFile?.renameTo(File(dest).name) ?: false
 }

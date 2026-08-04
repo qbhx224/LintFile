@@ -1,3 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Lint File</string>
+
+    <string name="title_main">Lint File</string>
+    <string name="title_register_permisstions">权限注册</string>
+    <string name="title_request_permission">需要权限</string>
+    <string name="title_dialog_file_info">文件信息</string>
+
+    <string name="text_register_external_storage_permission">申请外部存储权限</string>
+    <string name="text_register_manage_external_permission">申请所有文件访问权限</string>
+    <string name="text_confirom">确定</string>
+    <string name="text_file_is_null">该文件不存在</string>
+    <string name="text_shizuku_service_is_not_active">Shizuku 服务未激活</string>
+
+    <string name="text_permission_external_storage">需要读写外部存储权限才能访问该文件</string>
+    <string name="text_permission_manage_storage">需要"所有文件访问"权限才能访问该文件</string>
+    <string name="text_permission_storage_access_framework">需要通过 SAF 授权访问 /Android/data 目录</string>
+    <string name="text_permission_shizuku">需要 Shizuku 权限才能访问该文件</string>
+
+    <string name="format_file_name">文件名: %1$s</string>
+    <string name="format_file_size">文件大小: %1$s</string>
+    <string name="format_file_last_update">yyyy-MM-dd HH:mm</string>
 </resources>

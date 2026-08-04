@@ -198,18 +198,21 @@ private fun Permission(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
         ) {
-            Button(
-                onClick = {
-                    writePermissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.READ_EXTERNAL_STORAGE,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+            // Android 11+ 上外部存储运行时权限已失效,不再展示该按钮
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                Button(
+                    onClick = {
+                        writePermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.READ_EXTERNAL_STORAGE,
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE
+                            )
                         )
-                    )
-                },
-                enabled = !hasWritePermission
-            ) {
-                Text(text = stringResource(id = R.string.text_register_external_storage_permission))
+                    },
+                    enabled = !hasWritePermission
+                ) {
+                    Text(text = stringResource(id = R.string.text_register_external_storage_permission))
+                }
             }
 
             Button(
@@ -283,10 +286,10 @@ private fun Content() {
                         { file -> !file.name.startsWith("-") },
                         { file -> !file.isDirectory() }, // 文件夹优先
                         { file ->
-                            val name = file.name
+                            val firstChar = file.name.firstOrNull()
                             when {
-                                name[0].isUpperCase() -> 0
-                                name[0].isLowerCase() -> 1
+                                firstChar?.isUpperCase() == true -> 0
+                                firstChar?.isLowerCase() == true -> 1
                                 else -> 2
                             }
                         },

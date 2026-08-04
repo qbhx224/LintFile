@@ -1,6 +1,7 @@
 package io.github.lumkit.io.impl
 
 import io.github.lumkit.io.LintFile
+import io.github.lumkit.io.LintFileInfo
 import io.github.lumkit.io.stripHiddenChar
 import java.io.File
 
@@ -35,14 +36,13 @@ class DefaultFile : LintFile {
 
     override fun delete(): Boolean = _file.delete() || File(path.stripHiddenChar()).delete()
 
-    override fun list(): Array<String> = _file.list()?.map {
-        "$path${File.separator}$it"
-    }?.toTypedArray() ?: arrayOf()
+    override fun deleteRecursively(): Boolean =
+        _file.deleteRecursively() || File(path.stripHiddenChar()).deleteRecursively()
+
+    override fun list(): Array<String> = _file.list() ?: arrayOf()
 
     override fun list(filter: (String) -> Boolean): Array<String> =
-        _file.list { dir, name -> filter("${dir}${File.separator}$name") }?.map {
-            "${path}${File.separator}$it"
-        }?.toTypedArray() ?: arrayOf()
+        _file.list { _, name -> filter(name) } ?: arrayOf()
 
     override fun listFiles(): Array<LintFile> =
         _file.listFiles()?.map {
@@ -54,6 +54,17 @@ class DefaultFile : LintFile {
             filter(DefaultFile(file.absolutePath))
         }?.map {
             DefaultFile(it.absolutePath)
+        }?.toTypedArray() ?: arrayOf()
+
+    override fun listFilesWithAttributes(): Array<LintFileInfo> =
+        _file.listFiles()?.map {
+            LintFileInfo(
+                name = it.name,
+                size = it.length(),
+                lastModified = it.lastModified(),
+                isDirectory = it.isDirectory,
+                isFile = it.isFile
+            )
         }?.toTypedArray() ?: arrayOf()
 
     override fun mkdirs(): Boolean = _file.mkdirs()
