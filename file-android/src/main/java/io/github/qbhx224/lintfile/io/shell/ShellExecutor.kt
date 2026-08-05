@@ -60,7 +60,7 @@ object ShellExecutor {
     @Throws(IOException::class)
     fun getShizukuProcess(run: String = "sh"): Process? {
         val env = getEnvPath()
-        val process = Shizuku.newProcess(arrayOf(run), if (env != null) arrayOf(env) else null, null)
+        val process = startShizukuProcess(run, env)
         if (env != null) {
             val outputStream = process.outputStream
             outputStream.write("export ".toByteArray())
@@ -69,5 +69,36 @@ object ShellExecutor {
             outputStream.flush()
         }
         return process
+    }
+
+    /**
+     * 通过反射调用 `Shizuku.newProcess`。
+     *
+     * Shizuku 13.1.0 中该方法为 public,13.1.5 起改为 private(并计划在 API 14 移除),
+     * 直接调用会在高版本 Shizuku 下抛出 IllegalAccessError 导致崩溃。
+     * 反射兼容两种版本;若方法在未来的 Shizuku API 中完全移除,会抛出带明确信息的 IOException。
+     */
+    @Throws(IOException::class)
+    private fun startShizukuProcess(run: String, env: String?): Process {
+        try {
+            val method = Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            )
+            method.isAccessible = true
+            return method.invoke(
+                null,
+                arrayOf(run),
+                if (env != null) arrayOf(env) else null,
+                null
+            ) as Process
+        } catch (e: Exception) {
+            throw IOException(
+                "Cannot start Shizuku process: Shizuku.newProcess is unavailable in the current Shizuku API version",
+                e
+            )
+        }
     }
 }

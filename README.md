@@ -205,6 +205,12 @@
 
 # 更新日志
 
+## v2.3.2
+
+- **修复**: Shizuku 13.1.5 将 `Shizuku.newProcess` 改为 private,消费者显式依赖 13.1.5 覆盖库的 13.1.0 时,运行时调用私有方法抛出 `IllegalAccessError` 崩溃
+  - 修复: 库升级至 Shizuku **13.1.5**,`newProcess` 改为反射调用(`getDeclaredMethod` + `setAccessible`),兼容 13.1.0(public)与 13.1.5+(private)两种形态;若未来 API 移除该方法,抛出带明确信息的 `IOException`
+- **注意**: 若你的项目显式依赖 Shizuku,请使用 `dev.rikka.shizuku:api:13.1.5+`,避免与库产生版本冲突
+
 ## v2.3.1
 
 - **修复**: Shizuku 模式无法访问 `/Android/data` 受限目录（如属主为 app 自身 uid、权限 770/700 的深层目录，表现为"目录为空"）
