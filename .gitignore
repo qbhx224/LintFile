@@ -34,3 +34,6 @@ google-services.json
 
 # Credentials
 gradle.properties
+
+# Release build outputs
+app/release/
