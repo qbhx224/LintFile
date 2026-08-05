@@ -60,7 +60,7 @@ object ShellExecutor {
     @Throws(IOException::class)
     fun getShizukuProcess(run: String = "sh"): Process? {
         val env = getEnvPath()
-        val process = startShizukuProcess(run, env)
+        val process = startShizukuProcess(arrayOf(run), if (env != null) arrayOf(env) else null)
         if (env != null) {
             val outputStream = process.outputStream
             outputStream.write("export ".toByteArray())
@@ -72,6 +72,18 @@ object ShellExecutor {
     }
 
     /**
+     * 启动一次性 Shizuku 进程(如 `cat` 读文件/`sh -c` 写文件)。
+     *
+     * 数据经进程管道(ParcelFileDescriptor)在应用与远程进程间传输,
+     * 不依赖跨 SELinux 域的共享文件。
+     */
+    @Throws(IOException::class)
+    internal fun newProcess(cmd: Array<String>): Process {
+        val env = getEnvPath()
+        return startShizukuProcess(cmd, if (env != null) arrayOf(env) else null)
+    }
+
+    /**
      * 通过反射调用 `Shizuku.newProcess`。
      *
      * Shizuku 13.1.0 中该方法为 public,13.1.5 起改为 private(并计划在 API 14 移除),
@@ -79,7 +91,7 @@ object ShellExecutor {
      * 反射兼容两种版本;若方法在未来的 Shizuku API 中完全移除,会抛出带明确信息的 IOException。
      */
     @Throws(IOException::class)
-    private fun startShizukuProcess(run: String, env: String?): Process {
+    private fun startShizukuProcess(cmd: Array<String>, env: Array<String>?): Process {
         try {
             val method = Shizuku::class.java.getDeclaredMethod(
                 "newProcess",
@@ -88,12 +100,7 @@ object ShellExecutor {
                 String::class.java
             )
             method.isAccessible = true
-            return method.invoke(
-                null,
-                arrayOf(run),
-                if (env != null) arrayOf(env) else null,
-                null
-            ) as Process
+            return method.invoke(null, cmd, env, null) as Process
         } catch (e: Exception) {
             throw IOException(
                 "Cannot start Shizuku process: Shizuku.newProcess is unavailable in the current Shizuku API version",

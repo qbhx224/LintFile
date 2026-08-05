@@ -205,6 +205,15 @@
 
 # 更新日志
 
+## v2.3.3
+
+- **重构**: Shizuku 模式文件读写从 FIFO 管道改为**一次性进程管道**(`Shizuku.newProcess`)
+  - 背景: FIFO 需要跨 SELinux 域共享文件(shell 域进不了 app 数据目录,app 域也进不了 `shell_data_file`),非 root 的 Shizuku 下读文件必然失败,表现为"能列出目录、无法读取内容"
+  - 读: `cat <path>` 进程的 stdout 经 ParcelFileDescriptor 直达应用;写: `sh -c "exec cat > '<path>'"`,数据经 stdin 写入
+  - 路径保留零宽连接符伪装(v2.3.1 的绕过修复在新方案中同样生效)
+  - 带超时的进程回收(5 分钟)与退出码校验,磁盘满/权限不足不再静默丢数据
+  - 移除 `createTempFIFO()` 等 FIFO 机制与 `ShellThreadPool`,顺带消除 SDK≥35 与旧版临时目录分支差异
+
 ## v2.3.2
 
 - **修复**: Shizuku 13.1.5 将 `Shizuku.newProcess` 改为 private,消费者显式依赖 13.1.5 覆盖库的 13.1.0 时,运行时调用私有方法抛出 `IllegalAccessError` 崩溃
