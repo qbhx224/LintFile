@@ -333,7 +333,7 @@ private fun ShizukuFile.newInputStream(): InputStream {
     if (isDirectory() || !canRead()) throw FileNotFoundException("No such file or directory: $path")
     val fifo = createTempFIFO()
     try {
-        val src = path.stripHiddenChar().escapeShellArg()
+        val src = path.escapeShellArg()
         val fifoArg = fifo.absolutePath.escapeShellArg()
         val cmd = "(cat $src > $fifoArg) && echo 1 || echo 0"
 
@@ -424,7 +424,7 @@ private fun ShizukuFile.newOutputStream(): OutputStream {
 
     val fifo = createTempFIFO()
     try {
-        val dest = path.stripHiddenChar().escapeShellArg()
+        val dest = path.escapeShellArg()
         val fifoArg = fifo.absolutePath.escapeShellArg()
         val cmd = "(cat $fifoArg > $dest) && echo 1 || echo 0"
 

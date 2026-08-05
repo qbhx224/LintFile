@@ -39,7 +39,9 @@ class ShizukuFile : LintFile {
     constructor(file: LintFile) : super(file)
     constructor(file: LintFile, child: String) : super(file, child)
 
-    private fun safeArg(value: String): String = value.stripHiddenChar().escapeShellArg()
+    // 注意:不能 stripHiddenChar!零宽连接符路径是绕过 FUSE 对 /Android/data
+    // 拦截的关键(FUSE 按路径拦截,shell 同样被拦),剥掉后受限目录将无法访问。
+    private fun safeArg(value: String): String = value.escapeShellArg()
 
     override fun exists(): Boolean =
         try {
@@ -101,14 +103,14 @@ class ShizukuFile : LintFile {
 
     override fun delete(): Boolean =
         try {
-            AdbShellPublic.doCmdSync(buildDeleteCommand(path.stripHiddenChar())) == "1"
+            AdbShellPublic.doCmdSync(buildDeleteCommand(path)) == "1"
         } catch (e: ShellException) {
             false
         }
 
     override fun deleteRecursively(): Boolean =
         try {
-            AdbShellPublic.doCmdSync(buildDeleteRecursivelyCommand(path.stripHiddenChar())) == "1"
+            AdbShellPublic.doCmdSync(buildDeleteRecursivelyCommand(path)) == "1"
         } catch (e: ShellException) {
             false
         }

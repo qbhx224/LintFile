@@ -205,6 +205,13 @@
 
 # 更新日志
 
+## v2.3.1
+
+- **修复**: Shizuku 模式无法访问 `/Android/data` 受限目录（如属主为 app 自身 uid、权限 770/700 的深层目录，表现为"目录为空"）
+  - 原因：FUSE 对 `/Android/data` 的拦截按路径生效（对 shell 用户同样生效），此前 `safeArg()`、`delete()`/`deleteRecursively()`、FIFO 流均会剥离路径中的零宽连接符，恰好破坏了绕过
+  - 修复：Shizuku shell 命令保留零宽伪装路径，原理与 MT 管理器等工具一致；增删改查已在设备实测全部通过
+- **补充说明**：`/Android/data` 的 FUSE 拦截对任何调用方（应用或 shell）均按路径匹配，零宽连接符伪装路径可绕过拦截直达底层；NORMAL 与 SHIZUKU 模式均适用
+
 ## v2.3.0
 
 - **包名迁移**: 全部源码包由 `io.github.lumkit.io` 迁移至 `io.github.qbhx224.lintfile.io`,库 namespace 与应用包名同步更新
