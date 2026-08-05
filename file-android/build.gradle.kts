@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "io.github.lumkit.lintfile"
+    namespace = "io.github.qbhx224.lintfile.io"
     compileSdk = 35
 
     defaultConfig {

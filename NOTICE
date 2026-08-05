@@ -1,0 +1,17 @@
+Lint File (LintFile)
+
+This project is a modified version of the original "LintFile" project
+(https://github.com/lumkit/LintFile), originally authored by lumkit
+(https://github.com/lumkit), licensed under the GNU LESSER GENERAL
+PUBLIC LICENSE, Version 2.1 (LGPL v2.1). See LICENSE.
+
+Modifications made by qbhx224 (https://github.com/qbhx224):
+
+  - Package renamed from io.github.lumkit.io to io.github.qbhx224.lintfile.io
+  - Maven coordinates changed from io.github.lumkit:* to io.github.qbhx224:lint-file
+  - First modification date: 2026-08-05
+  - See README.md (更新日志) and the git history for the complete changelog.
+
+The modified library remains licensed under LGPL v2.1, and the source code
+remains publicly available. This NOTICE file itself is not a copyright
+notice; it is provided to document the provenance of this modified work.

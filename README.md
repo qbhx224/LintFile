@@ -37,7 +37,7 @@
 2. 导入lint-file依赖
    ```kotlin
    dependencies {
-       implementation("io.github.qbhx224:lint-file:2.2.0")
+       implementation("io.github.qbhx224:lint-file:2.3.0")
    }
    ```
 
@@ -204,6 +204,12 @@
 - **`delete()` 与 `deleteRecursively()`**：`delete()` 与 `java.io.File` 语义一致，仅删除文件或空目录；递归删除整个目录树请显式调用 `deleteRecursively()`
 
 # 更新日志
+
+## v2.3.0
+
+- **包名迁移**: 全部源码包由 `io.github.lumkit.io` 迁移至 `io.github.qbhx224.lintfile.io`,库 namespace 与应用包名同步更新
+- **破坏性变更**: 旧包名下的 `import io.github.lumkit.io.*` 需替换为 `io.github.qbhx224.lintfile.io.*`
+- 新增 `NOTICE` 文件并保留原作者版权信息,符合 LGPL v2.1 修改版分发要求
 
 ## v2.2.0
 
