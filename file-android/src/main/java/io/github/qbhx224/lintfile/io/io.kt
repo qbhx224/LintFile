@@ -86,10 +86,14 @@ private val safAccessCache = ConcurrentHashMap<String, Boolean>()
 private fun canUseDisguisedSubtree(pure: String): Boolean {
     val root = pure.lockedSubtreeRoot()
     if (root != null) {
-        return disguiseProbeCache.computeIfAbsent(root) {
-            val disguisedRoot = File(disguisedOf(root))
-            disguisedRoot.isDirectory && disguisedRoot.list() != null
-        }
+        // 目录不存在时不缓存:应用首次访问后可能才创建目录,
+        // 缓存 false 会导致目录创建后仍判定"不可绕过",需允许后续重新探测
+        disguiseProbeCache[root]?.let { return it }
+        val disguisedRoot = File(disguisedOf(root))
+        if (!disguisedRoot.exists()) return false
+        val usable = disguisedRoot.isDirectory && disguisedRoot.list() != null
+        disguiseProbeCache[root] = usable
+        return usable
     }
     return File(disguisedOf(pure)).canRead()
 }
